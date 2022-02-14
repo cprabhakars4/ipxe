@@ -25,10 +25,12 @@ FILE_LICENCE ( GPL2_OR_LATER_OR_UBDL );
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <assert.h>
 #include <ipxe/console.h>
 #include <ipxe/keys.h>
+#include <ipxe/keymap.h>
 #include <ipxe/usb.h>
 #include "usbkbd.h"
 
@@ -69,12 +71,6 @@ static unsigned int usbkbd_map ( unsigned int keycode, unsigned int modifiers,
 	} else if ( keycode <= USBKBD_KEY_Z ) {
 		/* Alphabetic keys */
 		key = ( keycode - USBKBD_KEY_A + 'a' );
-		if ( modifiers & USBKBD_CTRL ) {
-			key -= ( 'a' - CTRL_A );
-		} else if ( ( modifiers & USBKBD_SHIFT ) ||
-			    ( leds & USBKBD_LED_CAPS_LOCK ) ) {
-			key -= ( 'a' - 'A' );
-		}
 	} else if ( keycode <= USBKBD_KEY_0 ) {
 		/* Numeric key row */
 		if ( modifiers & USBKBD_SHIFT ) {
@@ -118,8 +114,28 @@ static unsigned int usbkbd_map ( unsigned int keycode, unsigned int modifiers,
 			};
 			key = keypad[ keycode - USBKBD_KEY_PAD_1 ];
 		};
+	} else if ( keycode == USBKBD_KEY_NON_US ) {
+		/* Non-US \ and | */
+		key = ( ( modifiers & USBKBD_SHIFT ) ?
+			( KEYMAP_PSEUDO | '|' ) : ( KEYMAP_PSEUDO | '\\' ) );
 	} else {
 		key = 0;
+	}
+
+	/* Remap key if applicable */
+	if ( ( keycode < USBKBD_KEY_CAPS_LOCK ) ||
+	     ( keycode == USBKBD_KEY_NON_US ) ) {
+		key = key_remap ( key );
+	}
+
+	/* Handle upper/lower case and Ctrl-<key> */
+	if ( islower ( key ) ) {
+		if ( modifiers & USBKBD_CTRL ) {
+			key -= ( 'a' - CTRL_A );
+		} else if ( ( modifiers & USBKBD_SHIFT ) ||
+			    ( leds & USBKBD_LED_CAPS_LOCK ) ) {
+			key -= ( 'a' - 'A' );
+		}
 	}
 
 	return key;

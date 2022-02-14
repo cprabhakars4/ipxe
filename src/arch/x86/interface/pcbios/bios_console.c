@@ -60,6 +60,21 @@ FILE_LICENCE ( GPL2_OR_LATER_OR_UBDL );
 
 #define ATTR_DEFAULT		ATTR_FCOL_WHITE
 
+/** Maximum keycode subject to remapping
+ *
+ * This allows us to avoid remapping the numeric keypad, which is
+ * necessary for keyboard layouts such as "fr" that swap the shifted
+ * and unshifted digit keys.
+ */
+#define SCANCODE_RSHIFT		0x36
+
+/** Scancode for the "non-US \ and |" key
+ *
+ * This is the key that appears between Left Shift and Z on non-US
+ * keyboards.
+ */
+#define SCANCODE_NON_US		0x56
+
 /* Set default console usage if applicable */
 #if ! ( defined ( CONSOLE_PCBIOS ) && CONSOLE_EXPLICIT ( CONSOLE_PCBIOS ) )
 #undef CONSOLE_PCBIOS
@@ -340,28 +355,13 @@ static const char * bios_ansi_seq ( unsigned int scancode ) {
 }
 
 /**
- * Map a key
- *
- * @v character		Character read from console
- * @ret character	Mapped character
- */
-static int bios_keymap ( unsigned int character ) {
-	struct key_mapping *mapping;
-
-	for_each_table_entry ( mapping, KEYMAP ) {
-		if ( mapping->from == character )
-			return mapping->to;
-	}
-	return character;
-}
-
-/**
  * Get character from BIOS console
  *
  * @ret character	Character read from console
  */
 static int bios_getchar ( void ) {
 	uint16_t keypress;
+	unsigned int scancode;
 	unsigned int character;
 	const char *ansi_seq;
 
@@ -383,11 +383,19 @@ static int bios_getchar ( void ) {
 			       : "=a" ( keypress )
 			       : "a" ( 0x1000 ), "m" ( bios_inject_lock ) );
 	bios_inject_lock--;
+	scancode = ( keypress >> 8 );
 	character = ( keypress & 0xff );
 
-	/* If it's a normal character, just map and return it */
-	if ( character && ( character < 0x80 ) )
-		return bios_keymap ( character );
+	/* If it's a normal character, map (if applicable) and return it */
+	if ( character && ( character < 0x80 ) ) {
+		if ( scancode < SCANCODE_RSHIFT ) {
+			return key_remap ( character );
+		} else if ( scancode == SCANCODE_NON_US ) {
+			return key_remap ( character | KEYMAP_PSEUDO );
+		} else {
+			return character;
+		}
+	}
 
 	/* Otherwise, check for a special key that we know about */
 	if ( ( ansi_seq = bios_ansi_seq ( keypress >> 8 ) ) ) {

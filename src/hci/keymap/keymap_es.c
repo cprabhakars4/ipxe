@@ -12,6 +12,8 @@ FILE_LICENCE ( PUBLIC_DOMAIN );
 
 /** "es" keyboard mapping */
 struct key_mapping es_mapping[] __keymap = {
+	{ 0x1c, 0x1d },	/* 0x1c => 0x1d */
+	{ 0x1e, 0x36 },	/* 0x1e => '6' */
 	{ 0x26, 0x2f },	/* '&' => '/' */
 	{ 0x28, 0x29 },	/* '(' => ')' */
 	{ 0x29, 0x3d },	/* ')' => '=' */
@@ -26,4 +28,6 @@ struct key_mapping es_mapping[] __keymap = {
 	{ 0x5e, 0x26 },	/* '^' => '&' */
 	{ 0x5f, 0x3f },	/* '_' => '?' */
 	{ 0x7d, 0x2a },	/* '}' => '*' */
+	{ 0xdc, 0x3c },	/* Pseudo-'\\' => '<' */
+	{ 0xfc, 0x3e },	/* Pseudo-'|' => '>' */
 };
